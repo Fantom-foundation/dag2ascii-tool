@@ -48,6 +48,51 @@ type DAG_event_t struct {
 	isread  bool
 }
 
+type EventHeader struct {
+	ClaimedTime      int64    `json:"claimedTime"`
+	Creator          string   `json:"creator"`
+	Epoch            int64    `json:"epoch"`
+	ExtraData        string   `json:"extraData"`
+	Frame            int64    `json:"frame"`
+	GasPowerLeft     int64    `json:"gasPowerLeft"`
+	GasPowerUsed     int64    `json:"gasPowerUsed"`
+	Hash             string   `json:"hash"`
+	IsRoot           bool     `json:"isRoot"`
+	Lamport          int64    `json:"lamport"`
+	MedianTime       int64    `json:"medianTime"`
+	Parents          []string `json:"parents"`
+	PrevEpochHash    string   `json:"prevEpochHash"`
+	Seq              int64    `json:"seq"`
+	TransactionsRoot string   `json:"transactionsRoot"`
+	Version          int      `json:"version"`
+}
+type Event struct {
+	EventHeader
+	Transactions	[]string	`json:"transactions"`
+}
+type EventResponse struct {
+	JsonRPC string      `json:"jsonrpc"`
+	Id      int64       `json:"id"`
+	Result  Event 		`json:"result"`
+}
+
+func (rpc *RPC) call(reqBody string) ([]byte, error) {
+	reqIO := strings.NewReader(reqBody)
+	resp, err := http.Post(rpc.url, "application/json", reqIO)
+	if err != nil {
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	// 	log.Printf("REQUEST: %s\nRESPONSE: %s\n", reqBody, body)
+	return body, nil
+}
+
+head := EventResponse{}
+err = json.Unmarshal(body, &head)
+
 func hextostr(a []hexutil.Bytes) string {
 	s := fmt.Sprint(a)
 	s = strings.TrimSuffix(s, "]")
@@ -92,15 +137,16 @@ func main() {
 	fmt.Println("=== Ask for first event - head of our DAG ===") //===============================
 
 	//err = Node1.Call(&ev, "debug_getEv", 1)
-	err = Node1.Call(&ev, "debug_getEvent", EvHash, false)
+	err = Node1.Call(&ev, "debug_getEvent", EvHash, true)
 
 	fmt.Println(ev.String())
 	fmt.Print("Creator - ")
 	fmt.Println(ev.Creator.String())
 	fmt.Print("Parents - ")
-	mm := ev.Parents
-	fmt.Println(mm)
+	fmt.Println(ev.Parents)
 
+	fmt.Println("=== Ask for first parent - head of our DAG ===") //===============================
+    EvHash = ev.Parents[0].String()
 	/*
 		if err != nil {
 			log.Fatal(err)
